@@ -7,6 +7,7 @@ class CarPartDatabase:
         self.filename = filename
         self.karts = {}
         self.parts = []
+        self.tracks = {}
         self.load_data()
 
     def load_data(self):
@@ -14,13 +15,13 @@ class CarPartDatabase:
             with open(self.filename, 'r', newline="") as file:
                 reader = csv.DictReader(file)
                 for row in reader:
-                    if row['kart']=='True':
+                    if row['type']=='kart':
                         kart_id = row['kart_id']
                         if kart_id not in self.karts:
                             self.karts[kart_id] = {
                                 'name': row['name'],
-                                'kart':True,
-                                'mileage': int(row['mileage']),
+                                'type':'kart',
+                                'mileage': float(row['mileage']),
                                 'kart_id':row['kart_id']
                             }
                     
@@ -28,22 +29,31 @@ class CarPartDatabase:
                     #    pass
                         #kart_parts = self.karts[kart_id]['parts']
                         #kart_parts[row['id']] = {'name': row['name'], 'mileage': row['mileage']}
-                    else:
+                    elif row['type']=='part':
                         part_details = row.get('details', '')  # Handle missing details field
                         self.parts.append({
                             'id': row['id'],
                             'name': row['name'],
-                            'kart': False,
+                            'type': 'part',
                             'details': part_details,
                             'mileage': int(row['mileage']),
                             'kart_id': row['kart_id']
                         })
+
+                    elif row['type']=='track':
+                        id = row['id']
+                        if id not in self.tracks:
+                            self.tracks[id] = {
+                                'name': row['name'],
+                                'type':'track',
+                                'mileage': row['mileage']
+                            }
         except FileNotFoundError:
             pass
 
     def save_data(self):
         with open(self.filename, 'w', newline='') as file:
-            fieldnames = ['id', 'name','kart', 'details', 'mileage', 'kart_id']
+            fieldnames = ['id', 'name','type', 'details', 'mileage', 'kart_id']
             writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             for part in self.parts:
@@ -52,20 +62,39 @@ class CarPartDatabase:
                 writer.writerow({  # Save kart as well
                     'id': kart_id,
                     'name': kart_data['name'],
-                    'kart':True,
-                    'details': '',  # Kart details can be empty
+                    'type':'kart',
+                    'details': '',  # Kart details are empty
                     'mileage': kart_data['mileage'],
                     'kart_id': kart_data['kart_id']
+                })
+            for id, track_data in self.tracks.items():
+                writer.writerow({  # Save track
+                    'id': id,
+                    'name': track_data['name'],
+                    'type':'track',
+                    'details': '',  # Track details are empty
+                    'mileage': track_data['mileage'],
+                    'kart_id': ''   #no kart id
                 })
 
     def add_kart(self, kart_name):
         new_id = str(len(self.karts) + 1)
-        self.karts[new_id] = {'name': kart_name,'kart':True, 'mileage': 0, 'kart_id': new_id}
+        self.karts[new_id] = {'id':new_id,'name': kart_name,'type':'kart', 'mileage': 0, 'kart_id': new_id}
+        self.save_data()
+
+    def add_track(self, track_name, length):
+        new_id = str(len(self.tracks) + 1)
+        self.tracks[new_id] = {'name': track_name,'type':'track', 'mileage': length}
         self.save_data()
 
     def remove_kart(self, kart_id):
         if kart_id in self.karts:
             del self.karts[kart_id]
+            self.save_data()
+
+    def remove_track(self, track_id):
+        if track_id in self.tracks:
+            del self.tracks[track_id]
             self.save_data()
 
     def add_part_to_kart(self, kart_id, part_id):
@@ -85,7 +114,7 @@ class CarPartDatabase:
 
     def add_part(self, part_name, part_details):
         new_id = str(len(self.parts) + 1)
-        self.parts.append({'id': new_id,'kart':False, 'name': part_name, 'details': part_details, 'mileage': 0, 'kart_id': 0})
+        self.parts.append({'id': new_id,'type':'part', 'name': part_name, 'details': part_details, 'mileage': 0, 'kart_id': 0})
         self.save_data()
 
     def remove_part(self, part_id):
@@ -132,9 +161,13 @@ class CarPartGUI:
         self.parts_frame = tk.Frame(root)
         self.parts_frame.pack(side=tk.RIGHT, padx=10, pady=10)
 
+        self.track_frame = tk.Frame(root)
+        self.track_frame.pack(side=tk.BOTTOM, padx=10, pady=10)
+
         self.init_kart_ui()
         self.init_parts_ui()
         self.init_kart_part_ui()
+        self.init_track_ui()
 
 
     def init_kart_ui(self):
@@ -200,6 +233,15 @@ class CarPartGUI:
             selected_kart_name = self.database.karts[self.selected_kart]['name']
             self.selected_kart_label.config(text=f"Selected Kart: {selected_kart_name}")
             self.refresh_kart_parts(self.selected_kart)
+        else:
+            pass
+    
+    def on_track_selected(self, event):
+        selected_track = self.track_listbox.curselection()
+        if selected_track:
+            self.selected_track = list(self.database.karts.keys())[selected_track[0]]
+            selected_track_name = self.database.tracks[self.selected_track]['name']
+            self.selected_track_label.config(text=f"Selected Track: {selected_track_name}")
         else:
             pass
         
@@ -274,11 +316,57 @@ class CarPartGUI:
 
         self.refresh_parts()
 
+    def init_track_ui(self):
+        
+        self.track_label = tk.Label(self.track_frame, text="Track Database:")
+        self.track_label.pack()
+
+        self.track_listbox = tk.Listbox(self.track_frame,width=30)
+        self.track_listbox.pack()
+
+        self.selected_track_label = tk.Label(self.track_frame, text="Selected Track:")
+        self.selected_track_label.pack()
+
+
+        self.track_name_label = tk.Label(self.track_frame, text="Track Name:")
+        self.track_name_label.pack()
+
+        self.track_name_entry = tk.Entry(self.track_frame)
+        self.track_name_entry.pack()
+
+        self.track_length_label = tk.Label(self.track_frame, text="Track Length:")
+        self.track_length_label.pack()
+
+        self.track_length_entry = tk.Entry(self.track_frame)
+        self.track_length_entry.pack()
+
+        self.add_track_button = tk.Button(self.track_frame, text="Add Track", command=self.add_track)
+        self.add_track_button.pack()
+
+        self.remove_track_button = tk.Button(self.track_frame, text="Remove Track", command=self.remove_track)
+        self.remove_track_button.pack()
+
+        self.track_laps_entry = tk.Entry(self.track_frame)
+        self.track_laps_entry.pack()
+
+        self.remove_track_button = tk.Button(self.track_frame, text="Add laps to kart", command=self.update_kart_mileage)
+        self.remove_track_button.pack()
+
+        self.track_listbox.bind("<<ListboxSelect>>", self.on_track_selected)  # Bind selection event
+
+        self.refresh_tracks()
+
     def refresh_karts(self):
         self.kart_listbox.delete(0, tk.END)
         for kart_id, kart_data in self.database.karts.items():
             kart_name = f"{kart_data['name']} - Mileage: {kart_data['mileage']}"
             self.kart_listbox.insert(tk.END, kart_name)
+
+    def refresh_tracks(self):
+        self.track_listbox.delete(0, tk.END)
+        for track_id,track_data in self.database.tracks.items():
+            track_name = f"{track_data['name']} - Length: {track_data['mileage']}"
+            self.track_listbox.insert(tk.END, track_name)
 
     def refresh_kart_parts(self, kart_id):
         self.kart_parts_listbox.delete(0, tk.END)
@@ -307,12 +395,29 @@ class CarPartGUI:
             self.kart_name_entry.delete(0, tk.END)
             self.refresh_karts()
 
+    def add_track(self):
+        track_name = self.track_name_entry.get()
+        length = self.track_length_entry.get()
+        if track_name:
+            self.database.add_track(track_name,length)
+            self.track_name_entry.delete(0, tk.END)
+            self.track_length_entry.delete(0, tk.END)
+            self.refresh_tracks()
+
     def remove_kart(self):
         selected_kart = self.kart_listbox.curselection()
         if selected_kart:
             kart_id = list(self.database.karts.keys())[selected_kart[0]]
             self.database.remove_kart(kart_id)
             self.refresh_karts()
+            self.kart_parts_listbox.delete(0, tk.END)
+
+    def remove_track(self):
+        selected_track = self.track_listbox.curselection()
+        if selected_track:
+            track_id = list(self.database.karts.keys())[selected_track[0]]
+            self.database.remove_track(track_id)
+            self.refresh_tracks()
             self.kart_parts_listbox.delete(0, tk.END)
 
     def add_part_to_kart(self):
@@ -350,7 +455,22 @@ class CarPartGUI:
             self.refresh_parts()
 
     def update_kart_mileage(self):
-        mileage = int(self.kart_mileage_entry.get())
+        manual = 0
+        auto = 0
+        
+        
+        if self.kart_mileage_entry.get() != '':
+            manual = int(self.kart_mileage_entry.get())
+        if self.track_laps_entry.get() != '':
+            auto = int(self.track_laps_entry.get())*float(self.database.tracks[self.selected_track[0]]['mileage'])
+            
+        
+
+        if auto > 0:
+            mileage = auto
+        else:
+            mileage = manual
+
         if mileage >= 0:
             kart_id = self.selected_kart
             self.database.update_kart_mileage(kart_id, mileage)
@@ -358,6 +478,7 @@ class CarPartGUI:
             self.refresh_kart_parts(kart_id)
             self.refresh_parts()
             self.kart_mileage_entry.delete(0, tk.END)
+            self.track_laps_entry.delete(0, tk.END)
         else:
             messagebox.showerror("Error", "Invalid kart selection or mileage value.")
 
