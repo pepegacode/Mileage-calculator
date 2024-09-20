@@ -1,0 +1,158 @@
+#include "Wire.h"
+#include <LiquidCrystal_I2C.h>
+
+
+LiquidCrystal_I2C lcd(0x27, 27, 28);
+
+
+#define dirPi  n
+#define EC1A 7
+#define EC1B 4
+#define EC2A 8
+#define EC2B 9
+#define backlitePin 5
+#define but1Pin 2
+#define but2Pin 3
+
+
+int counter = 0;
+int heading = 0;
+int alt = 0;
+int aState;
+int aLastState;
+int CState;
+int CLastState;
+volatile bool b1Cnt = false;
+int b2Cnt;
+int bLightPWM = 119;
+
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(1, 0);
+
+  pinMode (EC1A, INPUT_PULLUP);
+  pinMode (EC1B, INPUT_PULLUP);
+  pinMode (EC2A, INPUT_PULLUP);
+  pinMode (EC2B, INPUT_PULLUP);
+  pinMode(but1Pin, INPUT_PULLUP);
+  pinMode(but2Pin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(but1Pin), b1Switch, FALLING);
+
+  aLastState = digitalRead(EC1A);
+  CLastState = digitalRead(EC2A);
+
+  analogWrite(backlitePin, bLightPWM);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcdprint();
+}
+
+void loop() {
+
+  //if b
+
+  if (b1Cnt == true) {
+    bLight();
+  }
+
+  aState = digitalRead(EC1A);
+  CState = digitalRead(EC2A);
+
+  if (aState != aLastState) {
+    if (digitalRead(EC1B) != aState && heading > 0) {
+
+      heading --;
+
+    }
+    else {
+      if ((heading * 5) < 360) {
+        heading ++;
+      }
+    }
+
+
+    lcdprint();
+
+  }
+  aLastState = aState;
+
+  if (CState != CLastState) {
+    if (digitalRead(EC2B) != CState && alt > 0) {
+      alt --;
+
+    }
+    else {
+      alt ++;
+
+    }
+
+    lcdprint();
+
+  }
+  CLastState = CState;
+
+}
+
+
+void lcdprint() {
+  //lcd.clear();
+  lcd.print("Head.: ");
+  lcd.print(int(heading * 5));
+  lcd.print("deg");
+  lcd.setCursor(0, 1);
+  lcd.print("Alt.: ");
+  lcd.print(int(alt * 500));
+  lcd.print("ft");
+  lcd.setCursor(0, 0);
+}
+
+void b1Switch() {
+
+  if (digitalRead(but1Pin) == LOW) {
+    // Switch was pressed
+    // Change state of toggle
+    b1Cnt = !b1Cnt;
+
+  }
+
+}
+
+void bLight() {
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Brightness: ");
+  lcd.print(int((bLightPWM * 100) / (255)));
+            lcd.print("%");
+
+  while (b1Cnt == true) {
+
+  aState = digitalRead(EC1A);
+
+    if (aState != aLastState) {
+      if (digitalRead(EC1B) != aState && bLightPWM > 0) {
+
+        bLightPWM = bLightPWM - 17;
+
+      }
+      else {
+        if ((bLightPWM) < 255) {
+          bLightPWM = bLightPWM + 17;
+        }
+      }
+
+      analogWrite(backlitePin, bLightPWM);
+      //bPerc = (bLightPWM * 100) / (255);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Brightness: ");
+      lcd.print(int((bLightPWM * 100) / (255)));
+                lcd.print("%");
+    }
+    aLastState = aState;
+  }
+  lcd.clear();
+  lcdprint();
+}

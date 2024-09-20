@@ -36,7 +36,7 @@ class CarPartDatabase:
                             'name': row['name'],
                             'type': 'part',
                             'details': part_details,
-                            'mileage': int(row['mileage']),
+                            'mileage': row['mileage'],
                             'kart_id': row['kart_id']
                         })
 
