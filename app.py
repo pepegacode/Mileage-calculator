@@ -1,6 +1,6 @@
 import csv
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 class CarPartDatabase:
     def __init__(self, filename):
@@ -138,7 +138,7 @@ class CarPartDatabase:
     def update_parts_mileage(self, kart_id, mileage):
         for part in self.parts:
             if str(part['kart_id'])==str(kart_id):
-                part['mileage'] += mileage
+                part['mileage'] = float(part['mileage']) + mileage
 
     def get_parts_without_kart(self):
         all_parts = set()
@@ -155,16 +155,29 @@ class CarPartGUI:
         self.selected_kart = None  # Store the selected kart
         self.selected_part = None  # Store the selected part
 
-        self.kart_frame = tk.Frame(root)
+        self.tabControl = ttk.Notebook(root)
+        self.tab1 = ttk.Frame(root)
+        self.tab2 = ttk.Frame(root)
+
+        self.tabControl.add(self.tab1, text='Setup')
+        self.tabControl.add(self.tab2, text='Laps')
+        self.tabControl.pack(expand=1, fill="both")
+        
+
+        self.kart_frame = tk.Frame(self.tab1)
         self.kart_frame.pack(side=tk.LEFT, padx=10, pady=10)
 
-        self.parts_frame = tk.Frame(root)
+        self.parts_frame = tk.Frame(self.tab1)
         self.parts_frame.pack(side=tk.RIGHT, padx=10, pady=10)
 
-        self.track_frame = tk.Frame(root)
-        self.track_frame.pack(side=tk.BOTTOM, padx=10, pady=10)
+        self.track_frame = tk.Frame(self.tab2)
+        self.track_frame.pack(side=tk.RIGHT, padx=10, pady=10)
+
+        self.kart_frame2 = tk.Frame(self.tab2)
+        self.kart_frame2.pack(side=tk.LEFT, padx=10, pady=10)
 
         self.init_kart_ui()
+        self.init_kart2_ui()
         self.init_parts_ui()
         self.init_kart_part_ui()
         self.init_track_ui()
@@ -201,7 +214,45 @@ class CarPartGUI:
         self.remove_kart_button.pack()
         
 
+        self.oneortwo=1
+        self.refresh_karts()
+    
+    def init_kart2_ui(self):
+        self.kart_name_label2 = tk.Label(self.kart_frame2, text="Kart Name:")
+        self.kart_name_label2.pack()
 
+        #self.kart_name_entry = tk.Entry(self.kart_frame)
+        #self.kart_name_entry.pack()
+
+        #self.add_kart_button = tk.Button(self.kart_frame, text="Add Kart", command=self.add_kart)
+        #self.add_kart_button.pack()
+        
+        self.kart_listbox2 = tk.Listbox(self.kart_frame2, selectmode=tk.SINGLE,width=30)
+        self.kart_listbox2.pack()
+
+        # Display selected kart's name
+        self.selected_kart_label2 = tk.Label(self.kart_frame2, text="Selected Kart:")
+        self.selected_kart_label2.pack()
+
+        self.kart_listbox2.bind("<<ListboxSelect>>", self.on_kart_selected)  # Bind selection event
+
+        #self.kart_parts_label = tk.Label(self.kart_frame, text="Parts on Kart:")
+        #self.kart_parts_label.pack()
+
+        #self.kart_parts_listbox = tk.Listbox(self.kart_frame)
+        #self.kart_parts_listbox.pack()
+        self.track_laps_entry = tk.Entry(self.kart_frame2)
+        self.track_laps_entry.pack()
+
+        self.add_laps_button = tk.Button(self.kart_frame2, text="Add laps to kart", command=self.update_kart_mileage)
+        self.add_laps_button.pack()
+
+
+        #self.remove_kart_button = tk.Button(self.kart_frame, text="Remove Kart", command=self.remove_kart)
+        #self.remove_kart_button.pack()
+        
+
+        self.oneortwo=2
         self.refresh_karts()
 
     def init_kart_part_ui(self):
@@ -214,25 +265,31 @@ class CarPartGUI:
 
         self.kart_parts_listbox.bind("<<ListboxSelect>>", self.on_kart_part_selected)  # Bind selection event
         
-        self.kart_mileage_label = tk.Label(self.kart_frame, text="Kart Mileage:")
-        self.kart_mileage_label.pack()
+        #self.kart_mileage_label = tk.Label(self.kart_frame, text="Kart Mileage:")
+        #self.kart_mileage_label.pack()
 
-        self.kart_mileage_entry = tk.Entry(self.kart_frame)
-        self.kart_mileage_entry.pack()
+        #self.kart_mileage_entry = tk.Entry(self.kart_frame)
+        #self.kart_mileage_entry.pack()
 
-        self.update_kart_mileage_button = tk.Button(self.kart_frame, text="Update Kart Mileage", command=self.update_kart_mileage)
-        self.update_kart_mileage_button.pack()
+        #self.update_kart_mileage_button = tk.Button(self.kart_frame, text="Update Kart Mileage", command=self.update_kart_mileage)
+        #self.update_kart_mileage_button.pack()
 
         self.refresh_parts()
         self.refresh_karts()
 
     def on_kart_selected(self, event):
         selected_kart = self.kart_listbox.curselection()
+        selected_kart2 = self.kart_listbox2.curselection()
         if selected_kart:
             self.selected_kart = list(self.database.karts.keys())[selected_kart[0]]
             selected_kart_name = self.database.karts[self.selected_kart]['name']
             self.selected_kart_label.config(text=f"Selected Kart: {selected_kart_name}")
             self.refresh_kart_parts(self.selected_kart)
+        elif selected_kart2:
+            self.selected_kart2 = list(self.database.karts.keys())[selected_kart2[0]]
+            selected_kart_name = self.database.karts[self.selected_kart2]['name']
+            self.selected_kart_label2.config(text=f"Selected Kart: {selected_kart_name}")
+            self.refresh_kart_parts(self.selected_kart2)
         else:
             pass
     
@@ -272,7 +329,7 @@ class CarPartGUI:
         self.parts_label = tk.Label(self.parts_frame, text="Parts Database:")
         self.parts_label.pack()
 
-        self.parts_listbox = tk.Listbox(self.parts_frame,width=30)
+        self.parts_listbox = tk.Listbox(self.parts_frame,width=60)
         self.parts_listbox.pack()
 
         self.selected_part_label = tk.Label(self.parts_frame, text="Selected Part:")
@@ -281,11 +338,11 @@ class CarPartGUI:
         self.selected_part_details = tk.Label(self.parts_frame)
         self.selected_part_details.pack()
 
-        self.part_mileage_entry = tk.Entry(self.parts_frame)
-        self.part_mileage_entry.pack()
+        #self.part_mileage_entry = tk.Entry(self.parts_frame)
+        #self.part_mileage_entry.pack()
 
-        self.update_part_mileage_button = tk.Button(self.parts_frame, text="Update Part Mileage", command=self.update_part_mileage)
-        self.update_part_mileage_button.pack()
+        #self.update_part_mileage_button = tk.Button(self.parts_frame, text="Update Part Mileage", command=self.update_part_mileage)
+        #self.update_part_mileage_button.pack()
 
         self.add_part_to_kart_button = tk.Button(self.parts_frame, text="Add Part to Kart", command=self.add_part_to_kart)
         self.add_part_to_kart_button.pack()
@@ -298,6 +355,8 @@ class CarPartGUI:
 
         self.part_name_entry = tk.Entry(self.parts_frame)
         self.part_name_entry.pack()
+
+
 
         self.part_details_label = tk.Label(self.parts_frame, text="Part Details:")
         self.part_details_label.pack()
@@ -346,21 +405,36 @@ class CarPartGUI:
         self.remove_track_button = tk.Button(self.track_frame, text="Remove Track", command=self.remove_track)
         self.remove_track_button.pack()
 
-        self.track_laps_entry = tk.Entry(self.track_frame)
-        self.track_laps_entry.pack()
+        #self.track_laps_entry = tk.Entry(self.track_frame)
+        #self.track_laps_entry.pack()
 
-        self.remove_track_button = tk.Button(self.track_frame, text="Add laps to kart", command=self.update_kart_mileage)
-        self.remove_track_button.pack()
+        #self.add_laps_button = tk.Button(self.track_frame, text="Add laps to kart", command=self.update_kart_mileage)
+        #self.add_laps_button.pack()
 
         self.track_listbox.bind("<<ListboxSelect>>", self.on_track_selected)  # Bind selection event
 
         self.refresh_tracks()
 
     def refresh_karts(self):
-        self.kart_listbox.delete(0, tk.END)
+        try:
+            self.kart_listbox.delete(0, tk.END)
+        except:
+            pass
+        try:
+            self.kart_listbox2.delete(0, tk.END)
+        except:
+            pass
         for kart_id, kart_data in self.database.karts.items():
             kart_name = f"{kart_data['name']} - Mileage: {kart_data['mileage']}"
-            self.kart_listbox.insert(tk.END, kart_name)
+            try:
+                self.kart_listbox.insert(tk.END, kart_name)
+            except:
+                pass
+            try:
+                self.kart_listbox2.insert(tk.END, kart_name)
+            except:
+                print("here")
+                pass
 
     def refresh_tracks(self):
         self.track_listbox.delete(0, tk.END)
@@ -459,8 +533,8 @@ class CarPartGUI:
         auto = 0
         
         
-        if self.kart_mileage_entry.get() != '':
-            manual = int(self.kart_mileage_entry.get())
+        #if self.kart_mileage_entry.get() != '':
+        #    manual = int(self.kart_mileage_entry.get())
         if self.track_laps_entry.get() != '':
             auto = int(self.track_laps_entry.get())*float(self.database.tracks[self.selected_track[0]]['mileage'])
             
@@ -472,12 +546,12 @@ class CarPartGUI:
             mileage = manual
 
         if mileage >= 0:
-            kart_id = self.selected_kart
+            kart_id = self.selected_kart2
             self.database.update_kart_mileage(kart_id, mileage)
             self.refresh_karts()
             self.refresh_kart_parts(kart_id)
             self.refresh_parts()
-            self.kart_mileage_entry.delete(0, tk.END)
+            #self.kart_mileage_entry.delete(0, tk.END)
             self.track_laps_entry.delete(0, tk.END)
         else:
             messagebox.showerror("Error", "Invalid kart selection or mileage value.")
@@ -486,7 +560,7 @@ class CarPartGUI:
         mileage = int(self.part_mileage_entry.get())
         
         if mileage >= 0:
-            kart_id = self.selected_kart
+            kart_id = self.selected_kart2
             part_id = self.selected_part['id']
             print(mileage,part_id)
             self.database.update_part_mileage(part_id, mileage)
