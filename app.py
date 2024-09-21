@@ -380,8 +380,12 @@ class CarPartGUI:
         self.parts_label = tk.Label(self.parts_frame, text="Parts Database:")
         self.parts_label.pack()
 
-        self.parts_listbox = tk.Listbox(self.parts_frame,width=120)
+        self.parts_listbox = tk.Listbox(self.parts_frame, width=120)
         self.parts_listbox.pack(expand=1, fill = "both")
+
+        self.scrollbar = tk.Scrollbar(self.parts_listbox, orient='vertical')
+        self.scrollbar.pack(side=tk.RIGHT,fill='y')
+        self.scrollbar.config(command=self.parts_listbox.yview)
 
         self.selected_part_label = tk.Label(self.parts_frame, text="Selected Part:")
         self.selected_part_label.pack()
